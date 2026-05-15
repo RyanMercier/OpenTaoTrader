@@ -1,0 +1,11 @@
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2
+pydantic-settings>=2
+aiosqlite>=0.19
+httpx>=0.25
+
+# Bittensor SDK is only needed for the live-trading CLI. Pinned soft so a
+# minor SDK bump doesn't break paper-only installs.
+bittensor>=9
+bittensor-wallet>=2

@@ -1,0 +1,25 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+.venv/
+venv/
+env/
+.DS_Store
+Thumbs.db
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Stray temp scripts.
+.tmp_*
+
+# Results directories created by the backtester / Monte Carlo runs.
+results/

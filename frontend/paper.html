@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenTaoTrader</title>
+<link rel="stylesheet" href="/static/common.css">
+<script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
+<style>
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 32px 0 8px;
+  gap: 16px;
+}
+.page-head h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-bright);
+  letter-spacing: -0.3px;
+}
+.page-sub {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 24px;
+}
+
+.portfolios-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.portfolio-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.portfolio-card:hover { border-color: #333; }
+.pc-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 6px;
+}
+.pc-stats {
+  display: flex;
+  gap: 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.pc-stats .v-good { color: var(--accent); }
+.pc-stats .v-bad { color: var(--red); }
+.pc-spark { width: 100%; height: 32px; }
+
+.create-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  margin-bottom: 24px;
+}
+.create-card summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-bright);
+  font-weight: 500;
+  list-style: none;
+}
+.create-card summary::before { content: "+ "; color: var(--accent); }
+.create-card[open] summary::before { content: "- "; }
+
+.cf-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+.cf-row label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cf-row input, .cf-row select {
+  padding: 6px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  min-width: 90px;
+}
+.cf-row input[type="text"] { min-width: 180px; }
+
+.strategies-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.strategies-picker label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+.strategies-picker input[type="checkbox"] { margin: 0; }
+
+.create-actions { margin-top: 14px; display: flex; gap: 8px; align-items: center; }
+.create-msg.ok  { color: var(--accent); font-size: 12px; }
+.create-msg.err { color: var(--red);    font-size: 12px; }
+
+/* Detail view */
+.detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.detail-back { font-size: 12px; color: var(--text-dim); }
+.detail-back:hover { color: var(--accent); }
+.detail-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+.detail-meta {
+  display: flex;
+  gap: 18px;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  margin-bottom: 18px;
+}
+
+.value-card, .draw-card, .table-card, .stats-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+}
+.stat-value {
+  font-family: var(--mono);
+  font-size: 18px;
+  color: var(--text-bright);
+  font-weight: 500;
+  letter-spacing: -0.3px;
+}
+.stat-value.v-good { color: var(--accent); }
+.stat-value.v-bad { color: var(--red); }
+.stat-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.mode-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  letter-spacing: 0.6px;
+  margin-left: 8px;
+  vertical-align: 2px;
+}
+.mode-badge.paper {
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+.mode-badge.live {
+  color: #001914;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+}
+.section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+#equityChart { width: 100%; height: 240px; }
+#drawdownChart { width: 100%; height: 120px; }
+
+.section-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.section-actions .ranges { display: flex; gap: 4px; margin-left: auto; }
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.lg-dot {
+  display: inline-block;
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+}
+.lg-strat { background: #00d4aa; }
+.lg-bench { background: #6b7280; }
+.lg-label { margin-right: 8px; }
+.section-actions button {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.section-actions button.active {
+  color: #001914;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th, .tbl td {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 7px 8px;
+  text-align: right;
+  border-bottom: 1px solid #141414;
+}
+.tbl th {
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  font-size: 10px;
+  border-bottom-color: var(--border);
+}
+.tbl th:first-child, .tbl td:first-child { text-align: left; }
+.tbl tr:hover td { background: #0d0d0d; }
+.tbl .v-good { color: var(--accent); }
+.tbl .v-bad { color: var(--red); }
+.tbl .dim { color: var(--text-dim); }
+
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.warn-banner {
+  background: #1a0d0f;
+  border: 1px solid #3a1e21;
+  color: var(--red);
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container-wide inner">
+    <a href="/" class="logo">Open<span>Tao</span>Trader</a>
+    <div class="nav-links">
+      <a href="/paper" class="active">Paper</a>
+      <a href="/docs">API Docs</a>
+      <a id="upstreamLink" href="#" target="_blank" rel="noopener">Data &raquo;</a>
+    </div>
+  </div>
+</header>
+
+<div class="container-wide" id="main"></div>
+
+<footer>
+  <div class="container-wide">
+    <p>
+      <a href="/paper">Paper</a> &middot;
+      <a href="/docs">API Docs</a> &middot;
+      <a id="footerUpstreamLink" href="#" target="_blank" rel="noopener">Data API</a> &middot;
+      <a href="https://github.com/ryanmercier/OpenTaoTrader">Source</a>
+    </p>
+  </div>
+</footer>
+
+<script>
+const API = '/api/v1';
+const $ = s => document.querySelector(s);
+const main = $('#main');
+let upstreamUrl = '';
+
+async function loadUpstream() {
+  try {
+    const r = await fetch('/health');
+    if (r.ok) {
+      const j = await r.json();
+      upstreamUrl = (j.upstream_api || '').replace(/\/$/, '');
+      ['upstreamLink', 'footerUpstreamLink'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && upstreamUrl) el.href = upstreamUrl;
+      });
+    }
+  } catch (e) { /* fall through; subnet links stay relative */ }
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = String(s ?? ''); return d.innerHTML; }
+function fmtTao(n, d = 2) {
+  if (n == null) return '-';
+  if (n === 0) return 'τ0';
+  if (Math.abs(n) >= 1000) return 'τ' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  if (Math.abs(n) >= 1) return 'τ' + n.toFixed(d);
+  return 'τ' + n.toFixed(4);
+}
+function fmtPct(n) {
+  if (n == null) return '-';
+  const v = n * 100;
+  return (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+}
+function fmtAge(iso) {
+  if (!iso) return 'never';
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+function sparkSvg(values, w = 260, h = 32) {
+  if (!values || values.length < 2) return `<svg width="${w}" height="${h}"></svg>`;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const step = w / (values.length - 1);
+  const points = values.map((v, i) => {
+    const x = i * step;
+    const y = h - ((v - min) / range) * (h - 4) - 2;
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(' ');
+  const stroke = values[values.length - 1] >= values[0] ? '#00d4aa' : '#e84855';
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+    <polyline points="${points}" fill="none" stroke="${stroke}" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function getPortfolioIdFromUrl() {
+  const m = location.pathname.match(/^\/paper\/(\d+)\/?$/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+// --- Index view: list portfolios + create form ----------------------
+
+async function renderIndex() {
+  let portfolios = [];
+  let strategies = [];
+  try {
+    const [pr, sr] = await Promise.all([
+      fetch(`${API}/paper/portfolios`),
+      fetch(`${API}/trading/strategies`),
+    ]);
+    if (!pr.ok) throw new Error(`portfolios HTTP ${pr.status}`);
+    if (!sr.ok) throw new Error(`strategies HTTP ${sr.status}`);
+    portfolios = await pr.json();
+    strategies = await sr.json();
+  } catch (e) {
+    main.innerHTML = `<div class="error-msg">${esc(e.message)}</div>`;
+    return;
+  }
+
+  const stratHtml = strategies
+    .filter(s => s.name !== 'drain_exit')
+    .map(s => `
+      <label title="${esc(s.doc || s.source)}">
+        <input type="checkbox" name="strategy" value="${esc(s.name)}"
+          ${['stake_velocity','mean_reversion','momentum'].includes(s.name) ? 'checked' : ''}>
+        <span>${esc(s.name)}</span>
+        <span class="dim" style="font-size:10px">${esc(s.source.split(':')[0])}</span>
+      </label>
+    `).join('');
+
+  main.innerHTML = `
+    <div class="page-head"><h1>Paper trading</h1></div>
+    <div class="page-sub">
+      The runner advances every active portfolio one cycle on the configured interval.
+      Set <code>PAPER_TRADING_ENABLED=true</code> on the host to actually run cycles;
+      the API is read-write either way for setup. drain_exit is always added as a safety net.
+    </div>
+
+    <details class="create-card" id="createDetails">
+      <summary>Create a new paper portfolio</summary>
+      <form id="createForm" autocomplete="off">
+        <div class="cf-row">
+          <label>Name<input type="text" name="name" required maxlength="80" placeholder="demo"></label>
+          <label>Capital (TAO)<input type="number" name="initial_capital_tao" value="100" min="1" step="0.1"></label>
+          <label>Poll interval (s)<input type="number" name="poll_interval_seconds" value="1800" min="60" max="86400"></label>
+          <label>Max positions<input type="number" name="max_positions" value="10" min="1" max="100"></label>
+          <label>Max % per position<input type="number" name="max_single_position_pct" value="0.20" step="0.01" min="0.01" max="1"></label>
+          <label>Reserve<input type="number" name="reserve_pct" value="0.20" step="0.01" min="0" max="0.95"></label>
+          <label>Hotkeys<input type="number" name="num_hotkeys" value="1" min="1" max="64"></label>
+        </div>
+        <div class="strategies-picker">${stratHtml || '<span class="dim">No strategies registered</span>'}</div>
+        <div class="create-actions">
+          <button type="submit" class="btn btn-primary">Create portfolio</button>
+          <span class="create-msg" id="createMsg"></span>
+        </div>
+      </form>
+    </details>
+
+    ${portfolios.length === 0 ? `
+      <div class="empty">No paper portfolios yet. Create one above.</div>
+    ` : `
+      <div class="portfolios-grid" id="portfoliosGrid">
+        ${portfolios.map(p => `
+          <a class="portfolio-card" href="/paper/${p.id}">
+            <div class="pc-name">
+              ${esc(p.name)}
+              <span class="mode-badge ${p.mode === 'live' ? 'live' : 'paper'}">${esc((p.mode || 'paper').toUpperCase())}</span>
+              ${p.active ? '' : '<span class="dim" style="font-size:11px;font-weight:400">[paused]</span>'}
+            </div>
+            <div class="pc-stats">
+              <span>${fmtTao(p.free_tao ?? p.initial_capital_tao)}</span>
+              <span class="${(p.peak_value || 0) > p.initial_capital_tao ? 'v-good' : 'dim'}">peak ${fmtTao(p.peak_value)}</span>
+              <span class="dim">${esc(fmtAge(p.last_cycle_at))}</span>
+            </div>
+            <div class="pc-spark" data-pid="${p.id}"><svg width="260" height="32"></svg></div>
+          </a>
+        `).join('')}
+      </div>
+    `}
+  `;
+
+  // Lazy-load sparklines
+  for (const cell of main.querySelectorAll('.pc-spark')) {
+    const pid = cell.dataset.pid;
+    fetch(`${API}/paper/portfolios/${pid}/history?hours=168`)
+      .then(r => r.ok ? r.json() : { points: [] })
+      .then(data => {
+        const vals = (data.points || []).map(p => p.total_value_tao);
+        cell.innerHTML = sparkSvg(vals, 260, 32);
+      })
+      .catch(() => {});
+  }
+
+  $('#createForm').addEventListener('submit', onCreatePortfolio);
+}
+
+async function onCreatePortfolio(ev) {
+  ev.preventDefault();
+  const f = ev.target;
+  const data = Object.fromEntries(new FormData(f).entries());
+  const strategies = Array.from(f.querySelectorAll('input[name=strategy]:checked')).map(i => i.value);
+  const body = {
+    name: data.name,
+    initial_capital_tao: parseFloat(data.initial_capital_tao),
+    poll_interval_seconds: parseInt(data.poll_interval_seconds, 10),
+    max_positions: parseInt(data.max_positions, 10),
+    max_single_position_pct: parseFloat(data.max_single_position_pct),
+    reserve_pct: parseFloat(data.reserve_pct),
+    num_hotkeys: parseInt(data.num_hotkeys, 10),
+    strategies,
+  };
+  const msg = $('#createMsg');
+  msg.className = 'create-msg';
+  msg.textContent = '';
+  try {
+    const r = await fetch(`${API}/paper/portfolios`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${r.status}`);
+    }
+    msg.classList.add('ok');
+    msg.textContent = 'Created. Refreshing...';
+    setTimeout(renderIndex, 500);
+  } catch (e) {
+    msg.classList.add('err');
+    msg.textContent = e.message;
+  }
+}
+
+// --- Detail view: equity curve + tables ----------------------------
+
+let equityChart = null, equitySeries = null, benchmarkSeries = null;
+let drawChart = null, drawSeries = null;
+let currentDetailId = null;
+
+async function renderDetail(pid) {
+  currentDetailId = pid;
+  let p, hist, positions, trades, stats;
+  try {
+    const [pr, hr, posR, tr, sr] = await Promise.all([
+      fetch(`${API}/paper/portfolios/${pid}`),
+      fetch(`${API}/paper/portfolios/${pid}/history?hours=168`),
+      fetch(`${API}/paper/portfolios/${pid}/positions`),
+      fetch(`${API}/paper/portfolios/${pid}/trades?limit=200`),
+      fetch(`${API}/paper/portfolios/${pid}/stats`),
+    ]);
+    if (pr.status === 404) {
+      main.innerHTML = `<div class="error-msg">Portfolio ${pid} not found</div>`;
+      return;
+    }
+    p = await pr.json();
+    hist = hr.ok ? await hr.json() : { points: [] };
+    positions = posR.ok ? await posR.json() : [];
+    trades = tr.ok ? await tr.json() : [];
+    stats = sr.ok ? await sr.json() : null;
+  } catch (e) {
+    main.innerHTML = `<div class="error-msg">${esc(e.message)}</div>`;
+    return;
+  }
+
+  const last = hist.points.length ? hist.points[hist.points.length - 1] : null;
+  const peak = p.peak_value ?? p.initial_capital_tao;
+  const value = last ? last.total_value_tao : (p.free_tao ?? p.initial_capital_tao);
+  const pnl = (value - p.initial_capital_tao) / p.initial_capital_tao;
+  const benchValue = last && last.benchmark_value_tao != null ? last.benchmark_value_tao : null;
+  const benchPnl = benchValue != null ? (benchValue - p.initial_capital_tao) / p.initial_capital_tao : null;
+  const alpha = benchPnl != null ? (pnl - benchPnl) : null;
+
+  main.innerHTML = `
+    <div class="detail-head">
+      <a class="detail-back" href="/paper">All portfolios</a>
+      <div></div>
+    </div>
+    <h1 class="detail-title">
+      ${esc(p.name)}
+      <span class="mode-badge ${p.mode === 'live' ? 'live' : 'paper'}">${esc((p.mode || 'paper').toUpperCase())}</span>
+      ${p.active ? '' : '<span class="dim" style="font-size:14px;font-weight:400">[paused]</span>'}
+    </h1>
+    <div class="detail-meta">
+      <span>Strategies: ${(p.strategies || []).map(esc).join(', ') || '-'}</span>
+      ${p.wallet_name ? `<span>Wallet: ${esc(p.wallet_name)}${p.hotkey_name ? ' / ' + esc(p.hotkey_name) : ''}</span>` : ''}
+      <span>Last cycle ${esc(fmtAge(p.last_cycle_at))}</span>
+    </div>
+
+    <div class="stats-card">
+      ${renderStats(p, stats, value, pnl, benchPnl, alpha, peak)}
+    </div>
+
+    <div class="value-card">
+      <div class="section-actions">
+        <span class="section-title">Equity curve (TAO)</span>
+        <div class="legend">
+          <span class="lg-dot lg-strat"></span><span class="lg-label">Strategy</span>
+          <span class="lg-dot lg-bench"></span><span class="lg-label" id="benchLabel">Pool-weighted buy & hold</span>
+        </div>
+        <div class="ranges">
+          <button data-hours="24">24h</button>
+          <button data-hours="168" class="active">7d</button>
+          <button data-hours="720">30d</button>
+        </div>
+        ${p.active
+          ? `<button class="btn btn-sm" id="pauseBtn">Pause</button>`
+          : `<button class="btn btn-sm" id="resumeBtn">Resume</button>`}
+      </div>
+      <div id="equityChart"></div>
+    </div>
+
+    <div class="draw-card">
+      <div class="section-title">Drawdown</div>
+      <div id="drawdownChart"></div>
+    </div>
+
+    <div class="table-card">
+      <div class="section-title">Open positions (${positions.length})</div>
+      ${positions.length === 0 ? '<div class="empty" style="padding:24px">No open positions.</div>' : `
+        <table class="tbl">
+          <thead><tr>
+            <th>Subnet</th><th>Entry</th><th>Alpha</th><th>Invested (TAO)</th><th>Strategy</th><th>Held</th>
+          </tr></thead>
+          <tbody>
+            ${positions.map(pos => `
+              <tr>
+                <td><a href="${upstreamUrl}/subnet/${pos.netuid}" target="_blank">SN ${pos.netuid}</a></td>
+                <td class="dim">τ${(+pos.entry_price).toFixed(6)}</td>
+                <td>${(+pos.alpha_amount).toFixed(4)}</td>
+                <td>${fmtTao(+pos.tao_invested, 3)}</td>
+                <td class="dim">${esc(pos.strategy)}</td>
+                <td class="dim">${esc(fmtAge(pos.entry_time))}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      `}
+    </div>
+
+    <div class="table-card">
+      <div class="section-title">Trades (${trades.length})</div>
+      ${trades.length === 0 ? '<div class="empty" style="padding:24px">No trades yet.</div>' : `
+        <table class="tbl">
+          <thead><tr>
+            <th>Time</th><th>Subnet</th><th>Side</th><th>Strategy</th><th>TAO</th><th>α</th><th>Slip</th><th>P&L</th>
+          </tr></thead>
+          <tbody>
+            ${trades.slice(0, 50).map(t => `
+              <tr>
+                <td class="dim">${esc(fmtAge(t.timestamp))}</td>
+                <td><a href="${upstreamUrl}/subnet/${t.netuid}" target="_blank">SN ${t.netuid}</a></td>
+                <td class="${t.direction === 'buy' ? 'v-good' : 'v-bad'}">${esc(t.direction)}</td>
+                <td class="dim">${esc(t.strategy)}</td>
+                <td>${fmtTao(+t.tao_amount, 3)}</td>
+                <td>${(+t.alpha_amount).toFixed(4)}</td>
+                <td class="dim">${(+t.slippage_pct * 100).toFixed(2)}%</td>
+                <td class="${t.pnl_tao == null ? 'dim' : (t.pnl_tao >= 0 ? 'v-good' : 'v-bad')}">
+                  ${t.pnl_tao == null ? '-' : (fmtTao(+t.pnl_tao, 3) + ' (' + fmtPct(+t.pnl_pct) + ')')}
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      `}
+    </div>
+  `;
+
+  setupEquityChart(hist, trades);
+
+  main.querySelectorAll('.section-actions .ranges button').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      main.querySelectorAll('.section-actions .ranges button').forEach(b => b.classList.toggle('active', b === btn));
+      const hr = await fetch(`${API}/paper/portfolios/${pid}/history?hours=${btn.dataset.hours}`);
+      const data = hr.ok ? await hr.json() : { points: [] };
+      const tr = await fetch(`${API}/paper/portfolios/${pid}/trades?limit=200`);
+      const trList = tr.ok ? await tr.json() : [];
+      setupEquityChart(data, trList);
+    });
+  });
+
+  const pauseBtn = $('#pauseBtn');
+  if (pauseBtn) pauseBtn.addEventListener('click', () => togglePortfolio(pid, 'pause'));
+  const resumeBtn = $('#resumeBtn');
+  if (resumeBtn) resumeBtn.addEventListener('click', () => togglePortfolio(pid, 'resume'));
+}
+
+async function togglePortfolio(pid, action) {
+  await fetch(`${API}/paper/portfolios/${pid}/${action}`, { method: 'POST' });
+  renderDetail(pid);
+}
+
+function statTile(label, value, opts = {}) {
+  const cls = opts.tone === 'good' ? 'v-good' : opts.tone === 'bad' ? 'v-bad' : '';
+  const sub = opts.sub ? `<span class="stat-sub">${esc(opts.sub)}</span>` : '';
+  return `
+    <div class="stat">
+      <span class="stat-label">${esc(label)}</span>
+      <span class="stat-value ${cls}">${value}</span>
+      ${sub}
+    </div>`;
+}
+
+function tone(n) {
+  if (n == null || isNaN(n)) return '';
+  return n > 0 ? 'good' : n < 0 ? 'bad' : '';
+}
+
+function fmtNum(n, digits = 2) {
+  if (n == null || isNaN(n)) return '-';
+  return n.toFixed(digits);
+}
+
+function renderStats(p, stats, fallbackValue, fallbackPnl, benchPnl, alpha, peak) {
+  // Stats endpoint may have failed; fall back to the values we already
+  // computed from the history payload so the card always paints.
+  const cur = stats?.current_value_tao ?? fallbackValue;
+  const ret = stats?.total_return_pct ?? fallbackPnl ?? 0;
+  const bench = stats?.benchmark_return_pct ?? benchPnl;
+  const a = stats?.alpha_pct ?? alpha;
+  const sharpe = stats?.sharpe_ratio ?? 0;
+  const sortino = stats?.sortino_ratio ?? 0;
+  const dd = stats?.max_drawdown_pct ?? 0;
+  const winRate = stats?.win_rate ?? 0;
+  const totalTrades = stats?.total_trades ?? 0;
+  const wins = stats?.winning_trades ?? 0;
+  const losses = stats?.losing_trades ?? 0;
+  const avgWin = stats?.avg_win_pct;
+  const avgLoss = stats?.avg_loss_pct;
+  const profitFactor = stats?.profit_factor;
+  const avgHold = stats?.avg_hold_hours ?? 0;
+  const cycles = stats?.cycles ?? 0;
+
+  return `
+    <div class="stats-grid">
+      ${statTile('Portfolio value', fmtTao(cur, 3), { sub: `${cycles} cycles` })}
+      ${statTile('Total return', fmtPct(ret), { tone: tone(ret) })}
+      ${bench != null ? statTile('Buy & hold return', fmtPct(bench), { tone: tone(bench) }) : ''}
+      ${a != null ? statTile('Alpha vs B&H', fmtPct(a), { tone: tone(a) }) : ''}
+      ${statTile('Sharpe (annualized)', fmtNum(sharpe, 2), { tone: tone(sharpe), sub: 'rf=0' })}
+      ${statTile('Sortino', fmtNum(sortino, 2), { tone: tone(sortino) })}
+      ${statTile('Max drawdown', '-' + (dd * 100).toFixed(2) + '%', { tone: dd > 0 ? 'bad' : '' })}
+      ${statTile('Win rate', (winRate * 100).toFixed(1) + '%', {
+        sub: `${wins}W / ${losses}L`,
+      })}
+      ${statTile('Total trades', String(totalTrades), {
+        sub: avgHold > 0 ? `avg hold ${avgHold.toFixed(1)}h` : ''
+      })}
+      ${(avgWin || avgLoss) ? statTile(
+        'Avg win / loss',
+        (avgWin != null ? fmtPct(avgWin) : '-') + ' / ' + (avgLoss != null ? fmtPct(avgLoss) : '-'),
+        { sub: profitFactor != null ? 'PF ' + profitFactor.toFixed(2) : '' }
+      ) : ''}
+      ${statTile('Peak', fmtTao(peak, 3), { sub: 'Free ' + fmtTao(p.free_tao, 3) })}
+    </div>`;
+}
+
+function setupEquityChart(hist, trades) {
+  const eq = document.getElementById('equityChart');
+  const dd = document.getElementById('drawdownChart');
+  if (!eq || !dd) return;
+
+  if (equityChart) { try { equityChart.remove(); } catch {} equityChart = null; }
+  if (drawChart) { try { drawChart.remove(); } catch {} drawChart = null; }
+  benchmarkSeries = null;
+
+  const baseOpts = {
+    layout: { background: { color: '#111' }, textColor: '#c8c8c8' },
+    grid: { vertLines: { color: '#1a1a1a' }, horzLines: { color: '#1a1a1a' } },
+    rightPriceScale: { borderColor: '#1e1e1e' },
+    timeScale: { borderColor: '#1e1e1e', timeVisible: true, secondsVisible: false },
+    crosshair: { mode: 1 },
+    handleScroll: false,
+    handleScale: false,
+  };
+
+  equityChart = LightweightCharts.createChart(eq, {
+    ...baseOpts, width: eq.clientWidth, height: 240,
+  });
+
+  // Benchmark goes in first so the strategy area overlays on top of it.
+  benchmarkSeries = equityChart.addLineSeries({
+    color: '#6b7280',
+    lineWidth: 1,
+    lineStyle: 2,  // dashed
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: true,
+    priceFormat: { type: 'price', precision: 4, minMove: 0.0001 },
+  });
+  equitySeries = equityChart.addAreaSeries({
+    lineColor: '#00d4aa',
+    topColor: 'rgba(0, 212, 170, 0.35)',
+    bottomColor: 'rgba(0, 212, 170, 0.02)',
+    priceFormat: { type: 'price', precision: 4, minMove: 0.0001 },
+  });
+
+  const points = hist.points || [];
+  const series = points
+    .map(p => ({ time: Math.floor(new Date(p.timestamp).getTime() / 1000), value: p.total_value_tao }))
+    .filter(p => p.time);
+  if (series.length) equitySeries.setData(series);
+
+  const benchPoints = points
+    .filter(p => p.benchmark_value_tao != null)
+    .map(p => ({ time: Math.floor(new Date(p.timestamp).getTime() / 1000), value: p.benchmark_value_tao }))
+    .filter(p => p.time);
+  if (benchPoints.length) benchmarkSeries.setData(benchPoints);
+
+  // Update legend label with universe size
+  const benchLabel = document.getElementById('benchLabel');
+  if (benchLabel) {
+    const u = (hist.benchmark_universe || []).length;
+    if (u > 0) benchLabel.textContent = `Pool-weighted buy & hold (${u} subnets)`;
+  }
+
+  // Trade markers on the equity curve
+  if (series.length && trades && trades.length) {
+    const markers = trades.slice(0, 200).map(t => ({
+      time: Math.floor(new Date(t.timestamp).getTime() / 1000),
+      position: t.direction === 'buy' ? 'belowBar' : 'aboveBar',
+      color: t.direction === 'buy' ? '#00d4aa' : '#e84855',
+      shape: t.direction === 'buy' ? 'arrowUp' : 'arrowDown',
+      text: `SN${t.netuid}`,
+    })).sort((a, b) => a.time - b.time);
+    try { equitySeries.setMarkers(markers); } catch {}
+  }
+  equityChart.timeScale().fitContent();
+
+  drawChart = LightweightCharts.createChart(dd, {
+    ...baseOpts, width: dd.clientWidth, height: 120,
+  });
+  drawSeries = drawChart.addAreaSeries({
+    lineColor: '#e84855',
+    topColor: 'rgba(232, 72, 85, 0.05)',
+    bottomColor: 'rgba(232, 72, 85, 0.4)',
+    priceFormat: { type: 'percent', precision: 2 },
+  });
+  const dseries = (hist.points || [])
+    .map(p => ({ time: Math.floor(new Date(p.timestamp).getTime() / 1000), value: p.drawdown_pct * 100 }))
+    .filter(p => p.time);
+  if (dseries.length) drawSeries.setData(dseries);
+  drawChart.timeScale().fitContent();
+
+  window.addEventListener('resize', () => {
+    if (equityChart) equityChart.applyOptions({ width: eq.clientWidth });
+    if (drawChart) drawChart.applyOptions({ width: dd.clientWidth });
+  });
+}
+
+// --- Bootstrap -----------------------------------------------------
+
+(function () {
+  loadUpstream();
+  const pid = getPortfolioIdFromUrl();
+  if (pid) renderDetail(pid);
+  else renderIndex();
+  window.addEventListener('popstate', () => {
+    const newPid = getPortfolioIdFromUrl();
+    if (newPid) renderDetail(newPid);
+    else renderIndex();
+  });
+})();
+</script>
+
+</body>
+</html>
