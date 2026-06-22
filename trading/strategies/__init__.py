@@ -118,6 +118,17 @@ from .drain_detector import DrainDetector              # noqa: E402,F401
 from .mean_reversion import MeanReversionStrategy      # noqa: E402,F401
 from .momentum import MomentumStrategy                  # noqa: E402,F401
 from .stake_velocity import StakeVelocityStrategy      # noqa: E402,F401
+from .xstmc import XSTMCStrategy                        # noqa: E402,F401
+from .sfb import StakeFlowBreakoutStrategy              # noqa: E402,F401
+from .eyc import EmissionYieldCarryStrategy             # noqa: E402,F401
+from .pdmr import PoolDepthMeanReversionStrategy        # noqa: E402,F401
+from .xmvb import XMVBStrategy                          # noqa: E402,F401
+from .lam import LiquidityAdjustedMomentumStrategy      # noqa: E402,F401
+from .rcb import RangeCompressionBreakoutStrategy       # noqa: E402,F401
+from .pmr import PairMeanReversionStrategy              # noqa: E402,F401
+from .wsi import WhaleStakeInflowStrategy               # noqa: E402,F401
+from .rlb import RLBTrendStrategy                       # noqa: E402,F401
+from .rl_ppo import RLPPOStrategy                       # noqa: E402,F401
 
 __all__ = [
     "Strategy",
@@ -130,4 +141,15 @@ __all__ = [
     "MeanReversionStrategy",
     "MomentumStrategy",
     "StakeVelocityStrategy",
+    "XSTMCStrategy",
+    "StakeFlowBreakoutStrategy",
+    "EmissionYieldCarryStrategy",
+    "PoolDepthMeanReversionStrategy",
+    "XMVBStrategy",
+    "LiquidityAdjustedMomentumStrategy",
+    "RangeCompressionBreakoutStrategy",
+    "PairMeanReversionStrategy",
+    "WhaleStakeInflowStrategy",
+    "RLBTrendStrategy",
+    "RLPPOStrategy",
 ]

@@ -1,0 +1,74 @@
+{
+  "subnets_trained": [
+    1,
+    8,
+    19,
+    51,
+    64,
+    95,
+    120
+  ],
+  "subnets_evaluated": [
+    1,
+    8,
+    19,
+    51,
+    64,
+    95,
+    120
+  ],
+  "train_window": [
+    "2026-04-15",
+    "2026-05-31"
+  ],
+  "val_window": [
+    "2026-06-01",
+    "2026-06-21"
+  ],
+  "total_steps": 200000,
+  "per_subnet_val": {
+    "1": {
+      "final_value": 96.33777980517334,
+      "return_pct": -3.6622201948266597,
+      "trades": 1,
+      "total_reward": -0.03662220194826664
+    },
+    "8": {
+      "final_value": 99.68832249271509,
+      "return_pct": -0.31167750728491317,
+      "trades": 1,
+      "total_reward": -0.0031167750728490996
+    },
+    "19": {
+      "final_value": 93.15935128094134,
+      "return_pct": -6.840648719058661,
+      "trades": 1,
+      "total_reward": -0.06840648719058669
+    },
+    "51": {
+      "final_value": 94.70679455828213,
+      "return_pct": -5.293205441717874,
+      "trades": 1,
+      "total_reward": -0.05293205441717871
+    },
+    "64": {
+      "final_value": 94.77699279497028,
+      "return_pct": -5.223007205029717,
+      "trades": 1,
+      "total_reward": -0.05223007205029712
+    },
+    "95": {
+      "final_value": 115.46358453906942,
+      "return_pct": 15.46358453906942,
+      "trades": 1,
+      "total_reward": 0.1546358453906942
+    },
+    "120": {
+      "final_value": 93.32047703348508,
+      "return_pct": -6.679522966514928,
+      "trades": 1,
+      "total_reward": -0.06679522966514928
+    }
+  },
+  "model_path": "models/ppo_bittensor.zip"
+}
