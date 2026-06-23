@@ -17,7 +17,7 @@ from .config import TradingConfig
 from .models import PortfolioState, Signal, Snapshot
 
 
-MIN_TRADE_TAO = 0.1
+MIN_TRADE_TAO = 0.1  # default; can be overridden per backtest via cfg.min_trade_tao
 
 
 class RiskManager:
@@ -66,13 +66,14 @@ class RiskManager:
         amount = min(slot_cap, pool_cap, conc_cap, slip_cap, free_after_reserve)
         amount *= signal.strength
 
-        if amount < MIN_TRADE_TAO:
-            return False, f"position size {amount:.4f} TAO below minimum", 0.0
+        min_trade = getattr(c, "min_trade_tao", MIN_TRADE_TAO)
+        if amount < min_trade:
+            return False, f"position size {amount:.4f} TAO below minimum {min_trade}", 0.0
 
         # Final safety: ensure we don't spend more than free_tao in hand
         if amount > portfolio.free_tao:
             amount = portfolio.free_tao
-            if amount < MIN_TRADE_TAO:
+            if amount < min_trade:
                 return False, "insufficient free TAO", 0.0
 
         return True, "", amount
