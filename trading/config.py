@@ -175,10 +175,15 @@ class TradingConfig:
 
     # === Paper Trading ===
     paper_poll_interval_seconds: int = 1800
-    # Strategies enabled for this paper portfolio. Names must exist in the
-    # registry (built-in keys: stake_velocity, mean_reversion, momentum,
-    # drain_exit, plus any external keys loaded). drain_exit is always
-    # added by the runner as a safety net regardless of this list.
-    strategies: list[str] = field(default_factory=lambda: [
-        "stake_velocity", "mean_reversion", "momentum",
-    ])
+    # Strategies enabled for this paper portfolio. Default = LAM solo, which
+    # walk-forward selected as the most robust performer:
+    #   - 4/4 positive 14-day folds (Apr-Jun 2026 data)
+    #   - mean +9.61% / median +9.58% / min +4.52% / max +16.86% per fold
+    #   - full backtest +9.19% over 67 days, +61% annualized
+    #   - Sharpe 0.81, Sortino 0.89, Calmar 6.81, max DD -9.02%
+    # Other ensembles (LAM+RCB, LAM+WSI) scored higher on the full backtest
+    # but only 50-75% of walk-forward folds were positive — the extra return
+    # was regime-specific overfit. drain_exit is auto-added as a safety net.
+    # Capacity: ~100 TAO. Larger sizes (500+) lose to slippage in current
+    # config; would need pool-depth-cap tightening to scale.
+    strategies: list[str] = field(default_factory=lambda: ["lam"])
