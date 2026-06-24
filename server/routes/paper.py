@@ -295,6 +295,45 @@ async def get_paper_stats(portfolio_id: int):
     )
     if stats is None:
         raise HTTPException(status_code=404, detail="Paper portfolio not found")
+
+    # Re-mark portfolio value against the LIVE snapshot stream so the header
+    # stays consistent with the per-position open P&L. The cycle-time value
+    # in value_history can be 30+ min stale; the snapshot_buffer is fed by
+    # the upstream SSE in real time. Falls back to the stored value if any
+    # open position has no live snapshot yet.
+    if _api_client is not None:
+        pos_rows = await _db.list_paper_positions(portfolio_id)
+        live_pos_value = 0.0
+        all_priced = True
+        for r in pos_rows:
+            buf = _api_client.snapshot_buffer.get(r["netuid"])
+            if not buf:
+                live_pos_value += float(r["tao_invested"])
+                all_priced = False
+                continue
+            latest = buf[-1]
+            tao_in = float(latest.get("tao_in") or 0.0)
+            alpha_in = float(latest.get("alpha_in") or 0.0)
+            alpha = float(r["alpha_amount"])
+            if tao_in <= 0 or alpha_in <= 0 or alpha <= 0:
+                live_pos_value += float(r["tao_invested"])
+                all_priced = False
+                continue
+            k = tao_in * alpha_in
+            tao_received = tao_in - (k / (alpha_in + alpha))
+            live_pos_value += tao_received
+        if all_priced or pos_rows:
+            free_tao = float(portfolio_row.get("free_tao") or 0.0)
+            live_value = free_tao + live_pos_value
+            stats["current_value_tao"] = live_value
+            initial = float(stats.get("initial_capital_tao") or 0.0)
+            if initial > 0:
+                stats["total_return_pct"] = (live_value - initial) / initial
+                # Alpha vs benchmark: recompute against the (possibly updated)
+                # current value so the two header tiles stay coherent.
+                bench_ret = float(stats.get("benchmark_return_pct") or 0.0)
+                stats["alpha_pct"] = stats["total_return_pct"] - bench_ret
+
     return PaperPortfolioStats(**stats)
 
 
