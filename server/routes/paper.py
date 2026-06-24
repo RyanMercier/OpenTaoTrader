@@ -129,6 +129,35 @@ async def get_paper_portfolio(portfolio_id: int):
     return _row_to_portfolio(row)
 
 
+def _mark_to_market(row: dict) -> dict:
+    """Add current_price / current_value_tao / unrealized_pnl_* to a position
+    row using the latest snapshot held by the api_client (if any). Constant-
+    product exit math, same model as the live trader and backtester."""
+    if _api_client is None:
+        return row
+    buf = _api_client.snapshot_buffer.get(row["netuid"])
+    if not buf:
+        return row
+    latest = buf[-1]
+    tao_in = float(latest.get("tao_in") or 0.0)
+    alpha_in = float(latest.get("alpha_in") or 0.0)
+    alpha = float(row["alpha_amount"])
+    invested = float(row["tao_invested"])
+    if tao_in <= 0 or alpha_in <= 0 or alpha <= 0 or invested <= 0:
+        return row
+    # AMM exit: simulate selling our alpha back into the pool.
+    k = tao_in * alpha_in
+    new_alpha_in = alpha_in + alpha
+    new_tao_in = k / new_alpha_in
+    tao_received = tao_in - new_tao_in
+    pnl_tao = tao_received - invested
+    row["current_price"] = tao_in / alpha_in
+    row["current_value_tao"] = tao_received
+    row["unrealized_pnl_tao"] = pnl_tao
+    row["unrealized_pnl_pct"] = pnl_tao / invested
+    return row
+
+
 @router.get(
     "/paper/portfolios/{portfolio_id}/positions",
     response_model=list[PaperPosition],
@@ -139,14 +168,22 @@ async def get_paper_positions(portfolio_id: int):
     if not await _db.get_paper_portfolio(portfolio_id):
         raise HTTPException(status_code=404, detail="Paper portfolio not found")
     rows = await _db.list_paper_positions(portfolio_id)
-    return [PaperPosition(**r) for r in rows]
+    enriched = [_mark_to_market(dict(r)) for r in rows]
+    return [PaperPosition(**r) for r in enriched]
 
 
 @router.get(
     "/paper/portfolios/{portfolio_id}/trades",
     response_model=list[PaperTrade],
 )
-async def get_paper_trades(portfolio_id: int, limit: int = 200):
+async def get_paper_trades(
+    portfolio_id: int,
+    limit: int = 200,
+    closed_only: bool = False,
+):
+    """Closed trades = ``direction == "sell"`` (the round-trip realised on
+    the exit leg). Buys are open-position events; with ``closed_only=true``
+    they're filtered out so the table is purely realised P&L."""
     if not _db:
         raise HTTPException(status_code=503, detail="Database not available")
     if limit < 1 or limit > 5000:
@@ -154,6 +191,8 @@ async def get_paper_trades(portfolio_id: int, limit: int = 200):
     if not await _db.get_paper_portfolio(portfolio_id):
         raise HTTPException(status_code=404, detail="Paper portfolio not found")
     rows = await _db.list_paper_trades(portfolio_id, limit=limit)
+    if closed_only:
+        rows = [r for r in rows if r.get("direction") == "sell"]
     return [PaperTrade(**r) for r in rows]
 
 

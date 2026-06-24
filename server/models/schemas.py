@@ -46,6 +46,13 @@ class PaperPosition(BaseModel):
     tao_invested: float
     strategy: str
     hotkey_id: int
+    # Mark-to-market against the latest pool state, computed via the
+    # constant-product AMM exit formula. None when the live snapshot
+    # isn't available (e.g. seeding still in progress).
+    current_price: float | None = None
+    current_value_tao: float | None = None
+    unrealized_pnl_tao: float | None = None
+    unrealized_pnl_pct: float | None = None
 
 
 class PaperTrade(BaseModel):

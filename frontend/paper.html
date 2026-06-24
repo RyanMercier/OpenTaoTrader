@@ -610,15 +610,19 @@ async function renderDetail(pid) {
       ${positions.length === 0 ? '<div class="empty" style="padding:24px">No open positions.</div>' : `
         <table class="tbl">
           <thead><tr>
-            <th>Subnet</th><th>Entry</th><th>Alpha</th><th>Invested (TAO)</th><th>Strategy</th><th>Held</th>
+            <th>Subnet</th><th>Entry</th><th>Now</th><th>Alpha</th><th>Invested (TAO)</th><th>Open P&L</th><th>Strategy</th><th>Held</th>
           </tr></thead>
           <tbody>
             ${positions.map(pos => `
               <tr>
                 <td><a href="${upstreamUrl}/subnet/${pos.netuid}" target="_blank">SN ${pos.netuid}</a></td>
                 <td class="dim">τ${(+pos.entry_price).toFixed(6)}</td>
+                <td class="dim">${pos.current_price == null ? '-' : 'τ' + (+pos.current_price).toFixed(6)}</td>
                 <td>${(+pos.alpha_amount).toFixed(4)}</td>
                 <td>${fmtTao(+pos.tao_invested, 3)}</td>
+                <td class="${pos.unrealized_pnl_tao == null ? 'dim' : (pos.unrealized_pnl_tao >= 0 ? 'v-good' : 'v-bad')}">
+                  ${pos.unrealized_pnl_tao == null ? '-' : (fmtTao(+pos.unrealized_pnl_tao, 4) + ' (' + fmtPct(+pos.unrealized_pnl_pct) + ')')}
+                </td>
                 <td class="dim">${esc(pos.strategy)}</td>
                 <td class="dim">${esc(fmtAge(pos.entry_time))}</td>
               </tr>`).join('')}
@@ -628,24 +632,23 @@ async function renderDetail(pid) {
     </div>
 
     <div class="table-card">
-      <div class="section-title">Trades (${trades.length})</div>
-      ${trades.length === 0 ? '<div class="empty" style="padding:24px">No trades yet.</div>' : `
+      <div class="section-title">Closed trades (${trades.filter(t => t.direction === 'sell').length})</div>
+      ${trades.filter(t => t.direction === 'sell').length === 0 ? '<div class="empty" style="padding:24px">No closed trades yet.</div>' : `
         <table class="tbl">
           <thead><tr>
-            <th>Time</th><th>Subnet</th><th>Side</th><th>Strategy</th><th>TAO</th><th>α</th><th>Slip</th><th>P&L</th>
+            <th>Time</th><th>Subnet</th><th>Strategy</th><th>TAO out</th><th>α sold</th><th>Slip</th><th>P&L</th>
           </tr></thead>
           <tbody>
-            ${trades.slice(0, 50).map(t => `
+            ${trades.filter(t => t.direction === 'sell').slice(0, 50).map(t => `
               <tr>
                 <td class="dim">${esc(fmtAge(t.timestamp))}</td>
                 <td><a href="${upstreamUrl}/subnet/${t.netuid}" target="_blank">SN ${t.netuid}</a></td>
-                <td class="${t.direction === 'buy' ? 'v-good' : 'v-bad'}">${esc(t.direction)}</td>
                 <td class="dim">${esc(t.strategy)}</td>
                 <td>${fmtTao(+t.tao_amount, 3)}</td>
                 <td>${(+t.alpha_amount).toFixed(4)}</td>
                 <td class="dim">${(+t.slippage_pct * 100).toFixed(2)}%</td>
                 <td class="${t.pnl_tao == null ? 'dim' : (t.pnl_tao >= 0 ? 'v-good' : 'v-bad')}">
-                  ${t.pnl_tao == null ? '-' : (fmtTao(+t.pnl_tao, 3) + ' (' + fmtPct(+t.pnl_pct) + ')')}
+                  ${t.pnl_tao == null ? '-' : (fmtTao(+t.pnl_tao, 4) + ' (' + fmtPct(+t.pnl_pct) + ')')}
                 </td>
               </tr>`).join('')}
           </tbody>
