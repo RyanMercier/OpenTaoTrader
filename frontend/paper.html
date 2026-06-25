@@ -856,10 +856,26 @@ function setupEquityChart(hist, trades) {
 // --- Bootstrap -----------------------------------------------------
 
 (function () {
+  // Visible bootstrap stamp so we can see if the script even ran when
+  // the page comes up blank. If this stamp is absent the issue is that
+  // the inline script never executed (CSP, extension, broken cache).
+  if (main) {
+    main.innerHTML = '<div style="padding:24px;color:#888">bootstrapping...</div>';
+  }
   loadUpstream();
   const pid = getPortfolioIdFromUrl();
-  if (pid) renderDetail(pid);
-  else renderIndex();
+  console.log('[bootstrap] pid =', pid, 'pathname =', location.pathname);
+  if (pid) {
+    renderDetail(pid).catch(err => {
+      if (main) main.innerHTML = `<div class="error-msg" style="padding:24px;color:#e84855">renderDetail(${pid}) failed: ${esc(String(err && err.stack || err))}</div>`;
+      console.error('renderDetail crashed', err);
+    });
+  } else {
+    renderIndex().catch(err => {
+      if (main) main.innerHTML = `<div class="error-msg" style="padding:24px;color:#e84855">renderIndex failed: ${esc(String(err && err.stack || err))}</div>`;
+      console.error('renderIndex crashed', err);
+    });
+  }
   window.addEventListener('popstate', () => {
     const newPid = getPortfolioIdFromUrl();
     if (newPid) renderDetail(newPid);
