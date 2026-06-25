@@ -83,9 +83,14 @@ class OpenTaoAPIClient:
                 except (KeyError, TypeError, ValueError):
                     continue
                 try:
+                    # Explicit limit=5000 (the API's max) — without it the
+                    # API defaults to 500 rows AND returns the OLDEST 500
+                    # within the window, which silently feeds the trader
+                    # stale snapshots whenever hours covers > ~10 days at
+                    # the default 30-min cadence.
                     r = await self._client.get(
                         f"{self.base_url}/api/v1/history/{n}/snapshots",
-                        params={"hours": hours},
+                        params={"hours": hours, "limit": 5000},
                     )
                     r.raise_for_status()
                     rows = r.json()
@@ -231,10 +236,12 @@ class OpenTaoAPIClient:
             if n in exclude:
                 continue
             try:
-                # Pull enough history to cover from anchor to now.
+                # Pull enough history to cover from anchor to now. Explicit
+                # limit=5000 to override the API's 500-row default which
+                # would silently truncate to the oldest rows.
                 r = await self._client.get(
                     f"{self.base_url}/api/v1/history/{n}/snapshots",
-                    params={"hours": 1440},
+                    params={"hours": 1440, "limit": 5000},
                 )
                 r.raise_for_status()
                 rows = r.json()
