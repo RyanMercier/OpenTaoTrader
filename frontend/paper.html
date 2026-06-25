@@ -657,7 +657,17 @@ async function renderDetail(pid) {
     </div>
   `;
 
-  setupEquityChart(hist, trades);
+  // Surface chart-setup errors directly to the page (charts have been
+  // failing silently — easier than asking users to open DevTools).
+  try {
+    setupEquityChart(hist, trades);
+  } catch (err) {
+    const slot = document.getElementById('equityChart');
+    if (slot) {
+      slot.innerHTML = `<div class="error-msg" style="padding:24px;color:#e84855">Chart error: ${esc(String(err && err.stack || err))}</div>`;
+    }
+    console.error('setupEquityChart failed', err);
+  }
 
   main.querySelectorAll('.section-actions .ranges button').forEach(btn => {
     btn.addEventListener('click', async () => {
