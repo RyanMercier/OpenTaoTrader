@@ -163,14 +163,24 @@ def _build_trading_config(cfg_dict: dict, portfolio_row: dict):
     config.initial_capital_tao = float(
         portfolio_row.get("initial_capital_tao", config.initial_capital_tao)
     )
-    for attr in (
+    KNOWN_RISK_ATTRS = {
         "strategies", "max_positions", "max_single_position_pct",
         "reserve_pct", "max_position_pct_of_pool", "max_slippage_pct",
         "num_hotkeys", "external_strategy_paths",
         "paper_poll_interval_seconds",
-    ):
+    }
+    # Curated risk knobs first.
+    for attr in KNOWN_RISK_ATTRS:
         if attr in cfg_dict and cfg_dict[attr] is not None:
             setattr(config, attr, cfg_dict[attr])
+    # Per-portfolio strategy parameter overrides (lam_stop_loss_pct etc).
+    # Only apply if the key names a real TradingConfig field — silently drop
+    # typos so a malformed POST can't break the runner.
+    for attr, value in cfg_dict.items():
+        if attr in KNOWN_RISK_ATTRS or value is None:
+            continue
+        if hasattr(config, attr):
+            setattr(config, attr, value)
     return config
 
 

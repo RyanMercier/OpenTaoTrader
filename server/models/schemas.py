@@ -19,6 +19,11 @@ class PaperPortfolioCreate(BaseModel):
     max_slippage_pct: float = Field(default=0.03, gt=0, le=0.5)
     num_hotkeys: int = Field(default=1, ge=1, le=64)
     external_strategy_paths: list[str] = Field(default_factory=list)
+    # Per-strategy parameter overrides (e.g. lam_stop_loss_pct, rcb_hold_hours).
+    # Anything here is setattr'd onto the per-portfolio TradingConfig if the
+    # field exists on the dataclass. Unknown keys are silently dropped at
+    # config-build time so a typo can't break the runner.
+    extra_config: dict = Field(default_factory=dict)
 
 
 class PaperPortfolio(BaseModel):

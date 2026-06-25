@@ -87,6 +87,11 @@ async def create_paper_portfolio(req: PaperPortfolioCreate):
         "num_hotkeys": req.num_hotkeys,
         "external_strategy_paths": req.external_strategy_paths,
     }
+    # Merge per-strategy / advanced overrides last so they win against any
+    # collision with the curated risk knobs above. Stored in the same JSON
+    # blob; _build_trading_config picks them up on the trader side.
+    if req.extra_config:
+        config_dict.update(req.extra_config)
     try:
         portfolio_id = await _db.create_paper_portfolio(
             name=req.name,
