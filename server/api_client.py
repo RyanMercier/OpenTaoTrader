@@ -206,49 +206,31 @@ class OpenTaoAPIClient:
         min_pool_depth_tao: float = 50.0,
     ) -> tuple[list[float], list[int]]:
         """Pool-weighted buy-and-hold series, computed against the API's
-        snapshot data. At ``anchor_ts`` we fetch every active subnet,
-        build the basket (weight = tao_in share), then at each requested
-        timestamp value the basket at the prevailing prices."""
+        snapshot data. At ``anchor_ts`` we read every active subnet from
+        the in-memory snapshot_buffer (already kept fresh by the SSE
+        stream), build the basket (weight = tao_in share), then at each
+        requested timestamp value the basket at the prevailing prices.
+
+        Previously this re-issued 129 sequential HTTP requests to the
+        upstream API on every /history call (~10s blocking the entire
+        dashboard render). The buffer is the same data; using it brings
+        the call down to single-digit milliseconds.
+        """
         if not timestamps:
             return [], []
 
         exclude = set(exclude_netuids or [])
-        try:
-            r = await self._client.get(f"{self.base_url}/api/v1/subnets")
-            r.raise_for_status()
-            listing = r.json()
-        except Exception:
+
+        async with self._buffer_lock:
+            snapshot_series = {
+                n: list(buf) for n, buf in self.snapshot_buffer.items()
+                if n not in exclude and buf
+            }
+        if not snapshot_series:
             return [initial_capital_tao for _ in timestamps], []
 
-        items = listing.get("subnets", []) if isinstance(listing, dict) else (
-            listing if isinstance(listing, list) else []
-        )
-
-        # Collect (netuid, anchor_price, anchor_tao_in) by querying each
-        # subnet's snapshot history near the anchor timestamp.
         eligible: list[tuple[int, float, float]] = []
-        snapshot_series: dict[int, list[dict]] = {}
-        for item in items:
-            try:
-                n = int(item["netuid"])
-            except (KeyError, TypeError, ValueError):
-                continue
-            if n in exclude:
-                continue
-            try:
-                # Pull enough history to cover from anchor to now. Explicit
-                # limit=5000 to override the API's 500-row default which
-                # would silently truncate to the oldest rows.
-                r = await self._client.get(
-                    f"{self.base_url}/api/v1/history/{n}/snapshots",
-                    params={"hours": 1440, "limit": 5000},
-                )
-                r.raise_for_status()
-                rows = r.json()
-            except Exception:
-                continue
-            if not rows:
-                continue
+        for n, rows in snapshot_series.items():
             anchor_row = _row_at_or_before(rows, anchor_ts)
             if anchor_row is None:
                 continue
@@ -257,10 +239,12 @@ class OpenTaoAPIClient:
             if tao_in < min_pool_depth_tao or price <= 0:
                 continue
             eligible.append((n, tao_in, price))
-            snapshot_series[n] = rows
 
         if not eligible:
             return [initial_capital_tao for _ in timestamps], []
+        # Drop any subnets that didn't qualify so we don't iterate them
+        # in the per-timestamp loop below.
+        snapshot_series = {n: snapshot_series[n] for n, _, _ in eligible}
 
         total_tao_in = sum(t for _, t, _ in eligible)
         holdings = {
@@ -293,14 +277,23 @@ def _ts(s: str) -> datetime:
 
 
 def _row_at_or_before(rows: list[dict], ts_iso: str) -> dict | None:
-    """Linear search over sorted snapshot rows for the most recent row
+    """Binary search over sorted snapshot rows for the most recent row
     at or before the given timestamp. ``rows`` is assumed to be sorted
-    ascending by timestamp (which is how the API returns them)."""
+    ascending by timestamp (which is how the API returns them).
+    O(log N) per lookup — matters because the benchmark series calls
+    this once per (subnet × timestamp) pair, which used to dominate
+    the /history endpoint's wall time."""
+    if not rows:
+        return None
     target = _ts(ts_iso)
+    lo, hi = 0, len(rows) - 1
+    # Find the rightmost row whose timestamp <= target.
     chosen = None
-    for r in rows:
-        rt = _ts(r.get("timestamp", ""))
-        if rt > target:
-            break
-        chosen = r
-    return chosen or (rows[0] if rows else None)
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if _ts(rows[mid].get("timestamp", "")) <= target:
+            chosen = rows[mid]
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return chosen or rows[0]
