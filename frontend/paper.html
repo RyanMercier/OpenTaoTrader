@@ -776,7 +776,9 @@ function setupEquityChart(hist, trades) {
   };
 
   equityChart = LightweightCharts.createChart(eq, {
-    ...baseOpts, width: eq.clientWidth, height: 240,
+    ...baseOpts,
+    autoSize: true,   // fit container even if clientWidth==0 at create time
+    height: 240,
   });
 
   // Benchmark goes in first so the strategy area overlays on top of it.
@@ -829,7 +831,9 @@ function setupEquityChart(hist, trades) {
   equityChart.timeScale().fitContent();
 
   drawChart = LightweightCharts.createChart(dd, {
-    ...baseOpts, width: dd.clientWidth, height: 120,
+    ...baseOpts,
+    autoSize: true,
+    height: 120,
   });
   drawSeries = drawChart.addAreaSeries({
     lineColor: '#e84855',
