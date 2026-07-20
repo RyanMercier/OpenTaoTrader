@@ -62,22 +62,9 @@ class ChainClient:
         )
 
     async def get_balance(self, coldkey_ss58: str) -> Balance:
-        async def _fetch() -> Balance:
-            result = await self._subtensor.substrate.query(
-                module="System",
-                storage_function="Account",
-                params=[coldkey_ss58],
-            )
-            free = result["data"]["free"]
-            if hasattr(free, "value"):
-                free = free.value
-            if isinstance(free, tuple):
-                free = free[0]
-            return Balance(int(free))
-
         return await self._cache.get_or_set(
             f"balance:{coldkey_ss58}",
-            lambda: self._call(_fetch),
+            lambda: self._call(lambda: self._subtensor.get_balance(coldkey_ss58)),
             ttl=settings.cache_ttl_balance,
         )
 
